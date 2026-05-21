@@ -68,6 +68,43 @@ const generate = (width, height) => {
     }
 }
 
+const burst = (i, j, w, h) => {
+    const neighbours = []
+    switch(i) {
+        case 0: 
+            neighbours.push(matrix[i+1][j])
+            break
+        case h-1: 
+            neighbours.push(matrix[i-1][j])
+            break
+        default:
+            neighbours.push(matrix[i-1][j])
+            neighbours.push(matrix[i+1][j])
+    }
+    switch(j) {
+        case 0:
+            neighbours.push(matrix[i][j+1])
+            break
+        case w-1:
+            neighbours.push(matrix[i][j-1])
+            break
+        default:
+            neighbours.push(matrix[i][j-1])
+            neighbours.push(matrix[i][j+1])
+    }
+
+    return neighbours
+    
+}
+
+const updateCell = (team, cell, text) => {
+    const style = team === 0 ? "blue" : "red"
+    text.style.color = style
+    cell.strength += 1
+    text.innerText = cell.strength
+    cell.owner = style
+}
+
 // on click handler
 const onClick = (div, row, col) => {
     // get the indecies of the clicked box
@@ -75,8 +112,10 @@ const onClick = (div, row, col) => {
     const i = +indexString[0]
     const j = +indexString[1]
 
-    const team = turn % 2; // 0 = blue, 1 = red
-    if(turn >=2 && !div.hasChildNodes()) return;
+    const team = turn % 2; 
+
+    const cell = matrix[i][j]
+    if(turn >= 2 && !div.hasChildNodes()) return;
     let text = div.querySelector("p");
     if (!text) {
         text = document.createElement("p");
@@ -85,20 +124,26 @@ const onClick = (div, row, col) => {
     const currentColor = window.getComputedStyle(text).color;
     if (team === 0 && currentColor === "rgb(255, 0, 0)") return;
     if (team === 1 && currentColor === "rgb(0, 0, 255)") return;
-    if (text.innerText.length === 0) {
-        if(team === 0) {
-            text.style.color = "blue"
-            matrix[i][j].strength += 1
-        } else{
-            text.style.color = "red"
-            matrix[i][j].strength += -1
+
+    updateCell(team, cell, text)
+
+    if (cell.strength >= cell.capacity) {
+        const neighbours = burst(i, j, matrix[0].length, matrix.length)
+        cell.strength = 0;
+        text.innerText = ""
+        for(let i = 0; i < neighbours.length; i++) {
+            const nCell = neighbours[i]
+            const nDiv = document.getElementById(`row${nCell.i}-${nCell.j}`)
+            let nText = nDiv.querySelector('p')
+            if(!nText) {
+                nText = document.createElement('p')
+                nDiv.appendChild(nText)
+            }
+
+            updateCell(team, nCell, nText)
         }
     }
-    if (text.innerText.length >= 3) {
-        div.replaceChildren();
-    } else {
-        text.innerText += ".";
-    }
+
     let turn_div = document.getElementById("turn")
     turn % 2 === 0 ? turn_div.querySelector('p').innerText = "Turn: Red" : turn_div.querySelector('p').innerText = "Turn: Blue"
     turn++;
