@@ -1,4 +1,5 @@
 let turn = 0
+let matrix = []
 
 class Cell {
     constructor(i, j, owner, strength, width, height) {
@@ -8,9 +9,9 @@ class Cell {
         this.strength = strength
         this.width = width
         this.height = height
-        this.capacity = this.capacity()
+        this.capacity = this.calcCapacity()
     }
-    capacity() {
+    calcCapacity() {
         let capacity
         if ((this.i === 0 && this.j === 0) || (this.i === this.height - 1 && this.j === 0) || (this.i === 0 && this.j === this.width - 1) || (this.i === this.height - 1 && this.j === this.width - 1)) {
             capacity = 2
@@ -49,10 +50,9 @@ const printMatrix = (matrix) => {
 }
 
 
-matrix = matrixGen(6, 12)
-
 // grid generator
 const generate = (width, height) => {
+    matrix = matrixGen(width, height)
     const grid = document.getElementById("grid")
     grid.style.gridTemplateColumns = `7fr repeat(${width}, 50px) 7fr`
     for(let i = 0; i < height; i++) {
@@ -154,5 +154,5 @@ const onClick = (div, row, col) => {
 }
 
 
-generate(6, 12)
+generate(10, 10)
 
