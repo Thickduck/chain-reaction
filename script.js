@@ -1,5 +1,9 @@
 let turn = 0
 let matrix = []
+let timerInterval;
+let timeLeft = 15;
+const MAX_TIME = 15;
+let gameOver = false;
 
 class Cell {
     constructor(i, j, owner, strength, width, height) {
@@ -26,7 +30,6 @@ class Cell {
     }
 }
 
-// matrix generator
 const matrixGen = (width, height) => {
     let matrix = []
     for(let i = 0; i < height; i++) {
@@ -49,8 +52,6 @@ const printMatrix = (matrix) => {
     }
 }
 
-
-// grid generator
 const generate = (width, height) => {
     matrix = matrixGen(width, height)
     const grid = document.getElementById("grid")
@@ -92,9 +93,7 @@ const burst = (i, j, w, h) => {
             neighbours.push(matrix[i][j-1])
             neighbours.push(matrix[i][j+1])
     }
-
     return neighbours
-    
 }
 
 const updateCell = (team, cell, text) => {
@@ -126,9 +125,101 @@ const processCell = (cell, team, text, matrix) => {
     }
 }
 
-// on click handler
+const initUI = () => {
+    const header = document.createElement("div");
+    header.id = "game-header";
+    header.style.display = "flex";
+    header.style.justifyContent = "center";
+    header.style.gap = "50px";
+    header.style.marginBottom = "20px";
+    header.style.fontFamily = "sans-serif";
+    header.style.fontSize = "18px";
+
+    header.innerHTML = `
+        <div id="score-blue" style="color: blue; font-weight: bold;">Blue: 0</div>
+        <div id="timer" style="font-weight: bold;">Time: ${MAX_TIME}s</div>
+        <div id="score-red" style="color: red; font-weight: bold;">Red: 0</div>
+    `;
+    
+    document.body.insertBefore(header, document.getElementById("grid"));
+}
+
+const calculateScores = () => {
+    let blueScore = 0;
+    let redScore = 0;
+
+    for (let i = 0; i < matrix.length; i++) {
+        for (let j = 0; j < matrix[i].length; j++) {
+            if (matrix[i][j].owner === "blue") blueScore += matrix[i][j].strength;
+            if (matrix[i][j].owner === "red") redScore += matrix[i][j].strength;
+        }
+    }
+
+    document.getElementById("score-blue").innerText = `Blue: ${blueScore}`;
+    document.getElementById("score-red").innerText = `Red: ${redScore}`;
+
+    if (turn >= 2 && !gameOver) {
+        if (blueScore === 0) triggerGameOver("Red");
+        if (redScore === 0) triggerGameOver("Blue");
+    }
+}
+
+const startTimer = () => {
+    clearInterval(timerInterval);
+    timeLeft = MAX_TIME;
+    document.getElementById("timer").innerText = `Time: ${timeLeft}s`;
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = `Time: ${timeLeft}s`;
+
+        if (timeLeft <= 0) {
+            turn++;
+            updateTurnDisplay();
+            startTimer();
+        }
+    }, 1000);
+}
+
+const updateTurnDisplay = () => {
+    let turn_div = document.getElementById("turn");
+    if(turn_div && turn_div.querySelector('p')) {
+        turn_div.style.textAlign = "center";
+        turn % 2 === 0 ? turn_div.querySelector('p').innerText = "Turn: Red" : turn_div.querySelector('p').innerText = "Turn: Blue";
+    }
+}
+
+const triggerGameOver = (winner) => {
+    gameOver = true;
+    clearInterval(timerInterval);
+
+    const replayMenu = document.createElement("div");
+    replayMenu.id = "replay-menu";
+    replayMenu.style.textAlign = "center";
+    replayMenu.style.marginTop = "20px";
+    replayMenu.innerHTML = `
+        <h2 style="color: ${winner.toLowerCase()};">${winner} Wins!</h2>
+        <button id="replay-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Play Again</button>
+    `;
+    
+    document.body.appendChild(replayMenu);
+
+    document.getElementById("replay-btn").addEventListener("click", () => {
+        turn = 0;
+        gameOver = false;
+        document.getElementById("replay-menu").remove();
+        document.getElementById("grid").innerHTML = ""; 
+        
+        generate(matrix[0].length, matrix.length);
+        calculateScores();
+        updateTurnDisplay();
+        startTimer();
+    });
+}
+
 const onClick = (div, row, col) => {
-    // get the indecies of the clicked box
+    if (gameOver) return; 
+    
     const indexString = div.id.slice(3).split("-")
     const i = +indexString[0]
     const j = +indexString[1]
@@ -149,10 +240,46 @@ const onClick = (div, row, col) => {
     processCell(cell, team, text, matrix)
 
     let turn_div = document.getElementById("turn")
-    turn % 2 === 0 ? turn_div.querySelector('p').innerText = "Turn: Red" : turn_div.querySelector('p').innerText = "Turn: Blue"
+    if(turn_div) {
+        turn_div.style.textAlign = "center";
+        turn % 2 === 0 ? turn_div.querySelector('p').innerText = "Turn: Red" : turn_div.querySelector('p').innerText = "Turn: Blue"
+    }
     turn++;
+
+    calculateScores();
+    startTimer();
 }
 
+const createStartMenu = () => {
+    const turnDiv = document.getElementById("turn");
+    if (turnDiv) {
+        turnDiv.style.display = "none";
+        turnDiv.style.textAlign = "center";
+    }
 
-generate(10, 10)
+    const startDiv = document.createElement("div");
+    startDiv.id = "start-menu";
+    startDiv.style.textAlign = "center";
+    startDiv.style.marginTop = "50px";
+    
+    const startBtn = document.createElement("button");
+    startBtn.innerText = "Start Game";
+    startBtn.style.padding = "10px 20px";
+    startBtn.style.fontSize = "20px";
+    startBtn.style.cursor = "pointer";
+    
+    startBtn.addEventListener("click", () => {
+        startDiv.remove();
+        if (turnDiv) {
+            turnDiv.style.display = "block";
+        }
+        initUI();
+        generate(10, 10);
+        startTimer();
+    });
+    
+    startDiv.appendChild(startBtn);
+    document.body.insertBefore(startDiv, document.getElementById("grid"));
+}
 
+createStartMenu();
